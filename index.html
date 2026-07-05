@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <title>Daily Paper</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    /* ─── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --ink:        #1a1a2e;
+      --paper:      #f9f5ee;
+      --blush:      #f2a65a;
+      --sky:        #6ec6f5;
+      --grass:      #6ecb8a;
+      --lavender:   #c9aaed;
+      --coral:      #f47b7b;
+      --muted:      #b0a99a;
+      --surface:    #ffffff;
+      --radius:     18px;
+      --font-body:  -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--paper);
+      font-family: var(--font-body);
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ─── Header ────────────────────────────────────────────────── */
+    header {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 14px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--blush);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .date-chip {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 4px 10px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── Nav tabs ──────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      background: var(--ink);
+      border-bottom: 2px solid var(--blush);
+    }
+
+    nav button {
+      flex: 1;
+      padding: 10px 6px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+      letter-spacing: 0.3px;
+    }
+
+    nav button.active {
+      color: var(--blush);
+      border-bottom: 2px solid var(--blush);
+      margin-bottom: -2px;
+      font-weight: 600;
+    }
+
+    /* ─── Screens ───────────────────────────────────────────────── */
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ─── Today screen ──────────────────────────────────────────── */
+    #today {
+      align-items: center;
+      padding: 24px 20px;
+      gap: 20px;
+    }
+
+    .today-label {
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 500;
+    }
+
+    .wallpaper-preview {
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 9/19.5;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(26,26,46,0.18);
+      position: relative;
+      background: #eee;
+    }
+
+    .wallpaper-preview canvas,
+    .wallpaper-preview img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .wp-badge {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(26,26,46,0.7);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    .set-btn {
+      background: var(--blush);
+      color: var(--ink);
+      border: none;
+      border-radius: 50px;
+      padding: 14px 36px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 12px rgba(242,166,90,0.35);
+    }
+
+    .set-btn:active { transform: scale(0.96); }
+
+    .instructions {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    /* ─── Draw screen ───────────────────────────────────────────── */
+    #draw {
+      flex-direction: column;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid #e8e2d8;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      border: 2px solid transparent;
+      background: var(--paper);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .tool-btn.active {
+      border-color: var(--ink);
+      background: var(--ink);
+    }
+
+    .color-swatch {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .color-swatch.selected {
+      border-color: var(--ink);
+      transform: scale(1.18);
+    }
+
+    .size-slider {
+      -webkit-appearance: none;
+      width: 80px; height: 4px;
+      background: #d8d2c8;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .size-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      background: var(--ink);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .spacer { flex: 1; }
+
+    .clear-btn {
+      border: none;
+      background: transparent;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      color: var(--coral);
+    }
+
+    .canvas-wrap {
+      flex: 1;
+      position: relative;
+      background: #fff;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #draw-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .save-bar {
+      padding: 12px 20px;
+      background: var(--surface);
+      border-top: 1px solid #e8e2d8;
+    }
+
+    .save-bar button {
+      width: 100%;
+      background: var(--sky);
+      color: var(--ink);
+      border: none;
+      border-radius: 50px;
+      padding: 13px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .save-bar button:active { transform: scale(0.97); }
+
+    /* ─── Upload screen ─────────────────────────────────────────── */
+    #upload {
+      padding: 28px 20px;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .upload-zone {
+      width: 100%;
+      max-width: 380px;
+      border: 2.5px dashed var(--muted);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #faf7f2;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--blush);
+      background: #fff8f0;
+    }
+
+    .upload-zone .icon { font-size: 3rem; margin-bottom: 12px; }
+    .upload-zone p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+    .upload-zone strong { color: var(--ink); }
+
+    #file-input { display: none; }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .preview-thumb {
+      aspect-ratio: 9/16;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .preview-thumb.selected { border-color: var(--blush); }
+
+    .preview-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-thumb .del {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .submit-photo-btn {
+      width: 100%;
+      max-width: 380px;
+      background: var(--grass);
+      color: var(--ink);
+      border: none;
+      border-radius: 50px;
+      padding: 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .submit-photo-btn:active { transform: scale(0.97); }
+    .submit-photo-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ─── Gallery screen ────────────────────────────────────────── */
+    #gallery {
+      padding: 20px;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .gallery-title {
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif !important;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      font-style: normal;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .gallery-card {
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 9/16;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .gallery-card:active { transform: scale(0.97); }
+
+    .gallery-card img, .gallery-card canvas {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-card .card-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(26,26,46,0.75));
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 20px 8px 8px;
+    }
+
+    .gallery-card .use-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: var(--blush);
+      color: var(--ink);
+      border: none;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+
+    /* ─── Toast ─────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--ink);
+      color: #fff;
+      border-radius: 50px;
+      padding: 10px 22px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ─── Confetti canvas (full screen overlay) ─────────────────── */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 998;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span> Daily Paper
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="date-chip" id="header-date"></div>
+    <button id="settings-btn" aria-label="Settings" style="background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#9881;&#65039;</button>
+  </div>
+</header>
+
+<!-- SETTINGS PANEL -->
+<div id="settings-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(26,26,46,0.55);backdrop-filter:blur(4px);">
+  <div id="settings-panel" style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:28px 24px 40px;max-height:85dvh;overflow-y:auto;">
+    <div style="width:40px;height:4px;background:#e0dbd2;border-radius:2px;margin:0 auto 20px;"></div>
+    <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:20px;font-family:-apple-system,sans-serif;">Background Settings</div>
+
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:-apple-system,sans-serif;">App Background Color</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;" id="appbg-swatches"></div>
+
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Text Color</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;" id="textcolor-swatches"></div>
+
+    <div style="width:100%;height:1px;background:#f0ebe2;margin-bottom:20px;"></div>
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:-apple-system,sans-serif;">Wallpaper Style</div>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="style-opts"></div>
+
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Color 1</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;" id="color1-swatches"></div>
+
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Color 2</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;" id="color2-swatches"></div>
+
+    <div style="font-size:0.75rem;font-weight:600;color:#b0a99a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Preview</div>
+    <canvas id="settings-preview" style="width:120px;height:260px;border-radius:14px;display:block;box-shadow:0 4px 16px rgba(0,0,0,0.12);margin-bottom:24px;"></canvas>
+
+    <button id="apply-settings-btn" style="width:100%;background:#f2a65a;color:#1a1a2e;border:none;border-radius:50px;padding:14px;font-size:1rem;font-weight:700;font-family:-apple-system,sans-serif;cursor:pointer;">Apply &#10003;</button>
+    <button id="close-settings-btn" style="width:100%;background:transparent;color:#b0a99a;border:none;padding:12px;font-size:0.9rem;font-family:-apple-system,sans-serif;cursor:pointer;margin-top:4px;">Cancel</button>
+  </div>
+</div>
+
+<nav>
+  <button class="active" data-screen="today">📱 Today</button>
+  <button data-screen="draw">✏️ Draw</button>
+  <button data-screen="upload">📷 Upload</button>
+  <button data-screen="gallery">🗂 Gallery</button>
+  <button data-screen="schedule">📅 Schedule</button>
+</nav>
+
+<!-- TODAY -->
+<section id="today" class="screen active">
+  <p class="today-label">today's wallpaper</p>
+  <div class="wallpaper-preview" id="today-preview">
+    <canvas id="preview-canvas"></canvas>
+    <div class="wp-badge" id="wp-badge">Daily Paper</div>
+  </div>
+  <button class="set-btn" id="save-today-btn">Save to Photos 📥</button>
+  <p class="instructions">
+    Save the image, then go to <strong>Photos → share → Use as Wallpaper</strong>
+    to set it on your iPhone.
+  </p>
+</section>
+
+<!-- DRAW -->
+<section id="draw" class="screen">
+  <div class="toolbar">
+    <button class="tool-btn active" id="pen-btn" title="Pen">✏️</button>
+    <button class="tool-btn" id="eraser-btn" title="Eraser">🧹</button>
+    <button class="tool-btn" id="fill-btn" title="Fill">🪣</button>
+
+    <div style="width:1px;height:24px;background:#e0dbd2;margin:0 2px;"></div>
+
+    <!-- Color swatches -->
+    <div class="color-swatch selected" style="background:#1a1a2e" data-color="#1a1a2e"></div>
+    <div class="color-swatch" style="background:#f2a65a" data-color="#f2a65a"></div>
+    <div class="color-swatch" style="background:#6ec6f5" data-color="#6ec6f5"></div>
+    <div class="color-swatch" style="background:#6ecb8a" data-color="#6ecb8a"></div>
+    <div class="color-swatch" style="background:#c9aaed" data-color="#c9aaed"></div>
+    <div class="color-swatch" style="background:#f47b7b" data-color="#f47b7b"></div>
+    <div class="color-swatch" style="background:#ffffff;border:2px solid #ccc" data-color="#ffffff"></div>
+
+    <div style="width:1px;height:24px;background:#e0dbd2;margin:0 2px;"></div>
+    <input class="size-slider" type="range" id="brush-size" min="2" max="40" value="8" />
+
+    <div class="spacer"></div>
+    <button class="clear-btn" id="clear-btn" title="Clear">🗑</button>
+  </div>
+
+  <div class="canvas-wrap" id="canvas-wrap">
+    <canvas id="draw-canvas"></canvas>
+  </div>
+
+  <div class="save-bar">
+    <button id="save-drawing-btn">Use as My Wallpaper ✨</button>
+  </div>
+</section>
+
+<!-- UPLOAD -->
+<section id="upload" class="screen">
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">🖼️</div>
+    <p><strong>Tap to choose a photo</strong><br>or drag one here<br><span style="font-size:0.8rem">JPG, PNG, GIF — up to 10 MB</span></p>
+  </div>
+  <input type="file" id="file-input" accept="image/*" multiple />
+
+  <div class="preview-grid" id="preview-grid"></div>
+
+  <button class="submit-photo-btn" id="submit-photo-btn" disabled>
+    Add to My Gallery 🎨
+  </button>
+</section>
+
+<!-- GALLERY -->
+<section id="gallery" class="screen">
+  <div class="gallery-title" style="font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-style:normal;">My Wallpapers</div>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</section>
+
+<!-- SCHEDULE -->
+<section id="schedule" class="screen" style="padding:20px;gap:0;overflow-y:auto;">
+  <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:4px;font-family:-apple-system,sans-serif;">Weekly Schedule</div>
+  <div style="font-size:0.8rem;color:#b0a99a;margin-bottom:20px;font-family:-apple-system,sans-serif;">Assign a wallpaper to each day — it switches automatically.</div>
+  <div id="schedule-list"></div>
+
+  <!-- Day picker modal -->
+  <div id="day-picker" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(26,26,46,0.55);backdrop-filter:blur(4px);">
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 40px;max-height:80dvh;overflow-y:auto;">
+      <div style="width:40px;height:4px;background:#e0dbd2;border-radius:2px;margin:0 auto 16px;"></div>
+      <div style="font-size:1rem;font-weight:700;color:#1a1a2e;margin-bottom:4px;font-family:-apple-system,sans-serif;" id="picker-title">Choose a wallpaper</div>
+      <div style="font-size:0.8rem;color:#b0a99a;margin-bottom:16px;font-family:-apple-system,sans-serif;">Tap one from your gallery</div>
+      <div id="picker-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;"></div>
+      <button id="picker-clear" style="width:100%;background:#f9f0f0;color:#e05555;border:none;border-radius:50px;padding:12px;font-size:0.9rem;font-weight:600;font-family:-apple-system,sans-serif;cursor:pointer;margin-bottom:8px;">Remove wallpaper for this day</button>
+      <button id="picker-cancel" style="width:100%;background:transparent;color:#b0a99a;border:none;padding:10px;font-size:0.9rem;font-family:-apple-system,sans-serif;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</section>
+
+
+<canvas id="confetti-canvas"></canvas>
+<div id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────
+const state = {
+  currentScreen: 'today',
+  currentColor: '#1a1a2e',
+  brushSize: 8,
+  tool: 'pen',
+  isDrawing: false,
+  lastX: 0,
+  lastY: 0,
+  pendingPhotos: [],    // File objects not yet committed
+  gallery: [],          // { id, type: 'draw'|'photo', dataUrl, date, label }
+  todayWallpaper: null, // gallery id
+};
+
+// ─── Init ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadGallery();
+  updateDateHeader();
+  initNav();
+  initDrawCanvas();
+  initUpload();
+  initSettings();
+  applyAppBg();
+  initSchedule();
+  initTodayScreen();
+  renderGallery();
+});
+
+// ─── Date ─────────────────────────────────────────────────────────
+function updateDateHeader() {
+  const el = document.getElementById('header-date');
+  el.textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ─── Nav ──────────────────────────────────────────────────────────
+function initNav() {
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      const screenId = btn.dataset.screen;
+      document.getElementById(screenId).classList.add('active');
+      state.currentScreen = screenId;
+      applyAppBg();
+      if (screenId === 'draw') resizeDrawCanvas();
+      if (screenId === 'gallery') renderGallery();
+    });
+  });
+}
+
+// ─── Today screen ─────────────────────────────────────────────────
+function initTodayScreen() {
+  renderTodayPreview();
+
+  document.getElementById('save-today-btn').addEventListener('click', () => {
+    const canvas = document.getElementById('preview-canvas');
+    const link = document.createElement('a');
+    link.download = `daily-paper-${dateStr()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Saved! Set it in Photos → Use as Wallpaper 🎉');
+    launchConfetti();
+  });
+}
+
+function renderTodayPreview() {
+  const canvas = document.getElementById('preview-canvas');
+  const wrap = document.getElementById('today-preview');
+  canvas.width = wrap.offsetWidth || 340;
+  canvas.height = wrap.offsetHeight || 700;
+  const ctx = canvas.getContext('2d');
+
+  // Check if there's a gallery wallpaper selected for today
+  const todayItem = state.gallery.find(g => g.id === state.todayWallpaper) || state.gallery[0];
+
+  if (todayItem) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      addWatermark(ctx, canvas);
+    };
+    img.src = todayItem.dataUrl;
+    document.getElementById('wp-badge').textContent = todayItem.label || 'Daily Paper';
+  } else {
+    // Generate a default daily background
+    drawDailyDefault(ctx, canvas);
+    document.getElementById('wp-badge').textContent = 'Daily Paper';
+  }
+}
+
+function drawDailyDefault(ctx, canvas) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('dp-bg-settings') || '{}');
+    if (saved.style) bgSettings.style = saved.style;
+    if (saved.color1) bgSettings.color1 = saved.color1;
+    if (saved.color2) bgSettings.color2 = saved.color2;
+    if (saved.appBg) bgSettings.appBg = saved.appBg;
+    if (saved.textColor) bgSettings.textColor = saved.textColor;
+  } catch(e) {}
+  drawBgToCanvas(ctx, canvas.width, canvas.height, bgSettings);
+  addWatermark(ctx, canvas);
+}
+
+function addWatermark(ctx, canvas) {
+  ctx.font = `${Math.floor(canvas.width * 0.035)}px 'Segoe UI', sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.textAlign = 'right';
+  ctx.fillText('Daily Paper', canvas.width - 10, canvas.height - 10);
+}
+
+// ─── Draw canvas ──────────────────────────────────────────────────
+let drawCtx, drawCanvas;
+
+function initDrawCanvas() {
+  drawCanvas = document.getElementById('draw-canvas');
+  drawCtx = drawCanvas.getContext('2d');
+
+  // Tool buttons
+  document.getElementById('pen-btn').addEventListener('click', () => setTool('pen'));
+  document.getElementById('eraser-btn').addEventListener('click', () => setTool('eraser'));
+  document.getElementById('fill-btn').addEventListener('click', () => setTool('fill'));
+  document.getElementById('clear-btn').addEventListener('click', clearCanvas);
+  document.getElementById('brush-size').addEventListener('input', e => { state.brushSize = +e.target.value; });
+
+  // Color swatches
+  document.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      state.currentColor = sw.dataset.color;
+      state.tool = 'pen';
+      setTool('pen');
+    });
+  });
+
+  // Drawing events — mouse
+  drawCanvas.addEventListener('mousedown', startDraw);
+  drawCanvas.addEventListener('mousemove', draw);
+  drawCanvas.addEventListener('mouseup', endDraw);
+  drawCanvas.addEventListener('mouseleave', endDraw);
+
+  // Drawing events — touch
+  drawCanvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e.touches[0]); }, { passive: false });
+  drawCanvas.addEventListener('touchmove',  e => { e.preventDefault(); draw(e.touches[0]); },  { passive: false });
+  drawCanvas.addEventListener('touchend',   e => { e.preventDefault(); endDraw(); },             { passive: false });
+
+  document.getElementById('save-drawing-btn').addEventListener('click', saveDrawing);
+
+  window.addEventListener('resize', resizeDrawCanvas);
+}
+
+function resizeDrawCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const W = wrap.offsetWidth, H = wrap.offsetHeight;
+  const imageData = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+  drawCanvas.width = W;
+  drawCanvas.height = H;
+  if (drawCanvas.width > 0 && imageData.width > 0) {
+    drawCtx.putImageData(imageData, 0, 0);
+  }
+  if (!hasDrawing()) {
+    drawCtx.fillStyle = '#ffffff';
+    drawCtx.fillRect(0, 0, W, H);
+  }
+}
+
+function hasDrawing() {
+  const data = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] > 0) return true;
+  }
+  return false;
+}
+
+function setTool(tool) {
+  state.tool = tool;
+  document.getElementById('pen-btn').classList.toggle('active', tool === 'pen');
+  document.getElementById('eraser-btn').classList.toggle('active', tool === 'eraser');
+  document.getElementById('fill-btn').classList.toggle('active', tool === 'fill');
+}
+
+function canvasPos(e) {
+  const r = drawCanvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (drawCanvas.width / r.width),
+    y: (e.clientY - r.top)  * (drawCanvas.height / r.height),
+  };
+}
+
+function startDraw(e) {
+  const { x, y } = canvasPos(e);
+  if (state.tool === 'fill') { floodFill(Math.round(x), Math.round(y), state.currentColor); return; }
+  state.isDrawing = true;
+  state.lastX = x; state.lastY = y;
+  drawCtx.beginPath();
+  drawCtx.arc(x, y, (state.tool === 'eraser' ? state.brushSize * 2 : state.brushSize) / 2, 0, Math.PI * 2);
+  drawCtx.fillStyle = state.tool === 'eraser' ? '#ffffff' : state.currentColor;
+  drawCtx.fill();
+}
+
+function draw(e) {
+  if (!state.isDrawing) return;
+  const { x, y } = canvasPos(e);
+  drawCtx.beginPath();
+  drawCtx.moveTo(state.lastX, state.lastY);
+  drawCtx.lineTo(x, y);
+  drawCtx.strokeStyle = state.tool === 'eraser' ? '#ffffff' : state.currentColor;
+  drawCtx.lineWidth = state.tool === 'eraser' ? state.brushSize * 2 : state.brushSize;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  drawCtx.stroke();
+  state.lastX = x; state.lastY = y;
+}
+
+function endDraw() { state.isDrawing = false; }
+
+function clearCanvas() {
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+}
+
+// Simple flood fill
+function floodFill(sx, sy, fillColorHex) {
+  const imgData = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+  const data = imgData.data;
+  const W = drawCanvas.width, H = drawCanvas.height;
+
+  function idx(x, y) { return (y * W + x) * 4; }
+  const ti = idx(sx, sy);
+  const tr = data[ti], tg = data[ti+1], tb = data[ti+2], ta = data[ti+3];
+
+  const fc = hexToRgb(fillColorHex);
+  if (!fc) return;
+  if (tr === fc.r && tg === fc.g && tb === fc.b) return;
+
+  const stack = [[sx, sy]];
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || x >= W || y < 0 || y >= H) continue;
+    const i = idx(x, y);
+    if (data[i] !== tr || data[i+1] !== tg || data[i+2] !== tb || data[i+3] !== ta) continue;
+    data[i] = fc.r; data[i+1] = fc.g; data[i+2] = fc.b; data[i+3] = 255;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  drawCtx.putImageData(imgData, 0, 0);
+}
+
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? { r: parseInt(r[1],16), g: parseInt(r[2],16), b: parseInt(r[3],16) } : null;
+}
+
+function saveDrawing() {
+  const dataUrl = drawCanvas.toDataURL('image/png');
+  addToGallery({ type: 'draw', dataUrl, label: `Drawing ${dateStr()}` });
+  state.todayWallpaper = state.gallery[0].id;
+  showToast('Drawing saved to your gallery! 🎨');
+  launchConfetti();
+  renderTodayPreview();
+}
+
+// ─── Upload screen ────────────────────────────────────────────────
+function initUpload() {
+  const zone = document.getElementById('upload-zone');
+  const input = document.getElementById('file-input');
+  const submitBtn = document.getElementById('submit-photo-btn');
+
+  input.addEventListener('change', () => handleFiles(Array.from(input.files)));
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    handleFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+  });
+
+  submitBtn.addEventListener('click', submitPhotos);
+}
+
+function handleFiles(files) {
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      state.pendingPhotos.push({ file, dataUrl: e.target.result });
+      renderPendingPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPendingPreviews() {
+  const grid = document.getElementById('preview-grid');
+  const btn = document.getElementById('submit-photo-btn');
+  grid.innerHTML = '';
+  state.pendingPhotos.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'preview-thumb';
+    const img = document.createElement('img');
+    img.src = p.dataUrl;
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '✕';
+    del.onclick = e => { e.stopPropagation(); state.pendingPhotos.splice(i,1); renderPendingPreviews(); };
+    div.appendChild(img);
+    div.appendChild(del);
+    grid.appendChild(div);
+  });
+  btn.disabled = state.pendingPhotos.length === 0;
+}
+
+function submitPhotos() {
+  state.pendingPhotos.forEach(p => {
+    addToGallery({ type: 'photo', dataUrl: p.dataUrl, label: `Photo ${dateStr()}` });
+  });
+  state.pendingPhotos = [];
+  renderPendingPreviews();
+  if (state.gallery.length > 0) state.todayWallpaper = state.gallery[0].id;
+  renderTodayPreview();
+  showToast(`Added to your gallery! 🎉`);
+  launchConfetti();
+  // Switch to gallery
+  document.querySelector('[data-screen="gallery"]').click();
+}
+
+// ─── Gallery ──────────────────────────────────────────────────────
+function renderGallery() {
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = '';
+  if (state.gallery.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      No wallpapers yet.<br>Draw something or upload a photo!
+    </div>`;
+    return;
+  }
+  state.gallery.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+
+    const img = document.createElement('img');
+    img.src = item.dataUrl;
+    img.alt = item.label;
+
+    const label = document.createElement('div');
+    label.className = 'card-label';
+    label.textContent = item.label;
+
+    const useBtn = document.createElement('button');
+    useBtn.className = 'use-btn';
+    useBtn.textContent = state.todayWallpaper === item.id ? '✓ Active' : 'Use';
+    useBtn.onclick = e => {
+      e.stopPropagation();
+      state.todayWallpaper = item.id;
+      saveGallery();
+      renderTodayPreview();
+      renderGallery();
+      showToast('Set as today\'s wallpaper!');
+    };
+
+    card.appendChild(img);
+    card.appendChild(label);
+    card.appendChild(useBtn);
+    grid.appendChild(card);
+  });
+}
+
+function addToGallery(item) {
+  item.id = `wp-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  item.date = new Date().toISOString();
+  state.gallery.unshift(item);
+  saveGallery();
+}
+
+function saveGallery() {
+  try {
+    localStorage.setItem('dp-gallery', JSON.stringify(
+      state.gallery.map(g => ({ ...g, dataUrl: g.dataUrl.length < 2_000_000 ? g.dataUrl : '' }))
+    ));
+    localStorage.setItem('dp-today', state.todayWallpaper || '');
+  } catch(e) { /* storage full */ }
+}
+
+function loadGallery() {
+  try {
+    const raw = localStorage.getItem('dp-gallery');
+    if (raw) state.gallery = JSON.parse(raw);
+    state.todayWallpaper = localStorage.getItem('dp-today') || null;
+  } catch(e) { state.gallery = []; }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────
+function dateStr() {
+  return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── Settings ─────────────────────────────────────────────────────
+const PALETTE = [
+  '#1a1a2e','#16213e','#0f3460','#533483',
+  '#f2a65a','#e8534a','#f47b7b','#ff9a9e',
+  '#6ec6f5','#4a90d9','#2c7be5','#0d47a1',
+  '#6ecb8a','#43a85a','#2e7d32','#a8e063',
+  '#c9aaed','#9b72cf','#7c4dff','#ce93d8',
+  '#fff9c4','#fffde7','#ffffff','#f9f5ee',
+];
+
+const STYLES = [
+  { id:'gradient', label:'Gradient' },
+  { id:'solid',    label:'Solid'    },
+  { id:'bubbles',  label:'Bubbles'  },
+  { id:'stripes',  label:'Stripes'  },
+];
+
+const bgSettings = {
+  style: 'gradient',
+  color1: '#1a1a2e',
+  color2: '#6ec6f5',
+  appBg: '#1a1a2e',
+  textColor: '#f9f5ee',
+};
+
+function initSettings() {
+  // Open
+  document.getElementById('settings-btn').addEventListener('click', openSettings);
+  document.getElementById('close-settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-overlay').style.display = 'none';
+  });
+  document.getElementById('apply-settings-btn').addEventListener('click', applySettings);
+
+  // Close on overlay tap (outside panel)
+  document.getElementById('settings-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('settings-overlay'))
+      document.getElementById('settings-overlay').style.display = 'none';
+  });
+
+  // Style buttons
+  const styleContainer = document.getElementById('style-opts');
+  STYLES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.textContent = s.label;
+    btn.dataset.style = s.id;
+    btn.style.cssText = 'padding:8px 14px;border-radius:20px;border:2px solid #e0dbd2;background:#f9f5ee;font-family:-apple-system,sans-serif;font-size:0.85rem;cursor:pointer;transition:all 0.15s;';
+    if (s.id === bgSettings.style) {
+      btn.style.background = '#1a1a2e';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#1a1a2e';
+    }
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#style-opts button').forEach(b => {
+        b.style.background = '#f9f5ee'; b.style.color = '#1a1a2e'; b.style.borderColor = '#e0dbd2';
+      });
+      btn.style.background = '#1a1a2e'; btn.style.color = '#fff'; btn.style.borderColor = '#1a1a2e';
+      bgSettings.style = s.id;
+      updateSettingsPreview();
+    });
+    styleContainer.appendChild(btn);
+  });
+
+  // Color swatches
+  buildSwatches('appbg-swatches', 'appBg');
+  buildSwatches('textcolor-swatches', 'textColor');
+  buildSwatches('color1-swatches', 'color1');
+  buildSwatches('color2-swatches', 'color2');
+
+  // Load saved settings
+  try {
+    const saved = JSON.parse(localStorage.getItem('dp-bg-settings') || '{}');
+    if (saved.style) bgSettings.style = saved.style;
+    if (saved.color1) bgSettings.color1 = saved.color1;
+    if (saved.color2) bgSettings.color2 = saved.color2;
+    if (saved.appBg) bgSettings.appBg = saved.appBg;
+    if (saved.textColor) bgSettings.textColor = saved.textColor;
+  } catch(e) {}
+  applyAppBg();
+}
+
+function buildSwatches(containerId, colorKey) {
+  const container = document.getElementById(containerId);
+  PALETTE.forEach(hex => {
+    const sw = document.createElement('div');
+    sw.style.cssText = `width:32px;height:32px;border-radius:50%;background:${hex};cursor:pointer;flex-shrink:0;border:3px solid ${bgSettings[colorKey]===hex ? '#1a1a2e' : 'transparent'};box-shadow:${bgSettings[colorKey]===hex ? '0 0 0 2px #f2a65a' : 'none'};transition:transform 0.15s;`;
+    if (hex === '#ffffff' || hex === '#fffde7' || hex === '#fff9c4' || hex === '#f9f5ee')
+      sw.style.boxShadow = bgSettings[colorKey]===hex ? '0 0 0 2px #f2a65a' : '0 0 0 1px #ccc';
+    sw.addEventListener('click', () => {
+      bgSettings[colorKey] = hex;
+      // Refresh all swatches for this key
+      container.querySelectorAll('div').forEach((s, i) => {
+        const h = PALETTE[i];
+        s.style.borderColor = bgSettings[colorKey]===h ? '#1a1a2e' : 'transparent';
+        s.style.boxShadow = bgSettings[colorKey]===h ? '0 0 0 2px #f2a65a' : (h==='#ffffff'||h==='#fffde7'||h==='#fff9c4'||h==='#f9f5ee' ? '0 0 0 1px #ccc' : 'none');
+      });
+      updateSettingsPreview();
+    });
+    container.appendChild(sw);
+  });
+}
+
+function applyAppBg() {
+  const bg = bgSettings.appBg || '#1a1a2e';
+  const textCol = bgSettings.textColor || '#f9f5ee';
+  document.documentElement.style.setProperty('--ink', bg);
+  document.documentElement.style.setProperty('--paper-text', textCol);
+  document.querySelectorAll('header, nav').forEach(el => el.style.background = bg);
+  document.querySelector('.logo').style.color = textCol;
+  document.querySelector('.date-chip').style.background = 'rgba(128,128,128,0.25)';
+  document.querySelector('.date-chip').style.color = textCol;
+  document.querySelectorAll('nav button').forEach(b => {
+    b.style.color = b.classList.contains('active') ? '#f2a65a' : textCol;
+    b.style.opacity = b.classList.contains('active') ? '1' : '0.65';
+  });
+  document.getElementById('settings-btn').style.background = 'rgba(128,128,128,0.25)';
+  // Also update logo dot to complement text
+  const dot = document.querySelector('.logo-dot');
+  if (dot) dot.style.background = '#f2a65a';
+}
+
+function openSettings() {
+  document.getElementById('settings-overlay').style.display = 'block';
+  const pc = document.getElementById('settings-preview');
+  pc.width = 120; pc.height = 260;
+  updateSettingsPreview();
+}
+
+function updateSettingsPreview() {
+  const canvas = document.getElementById('settings-preview');
+  const ctx = canvas.getContext('2d');
+  drawBgToCanvas(ctx, canvas.width, canvas.height, bgSettings);
+}
+
+function applySettings() {
+  localStorage.setItem('dp-bg-settings', JSON.stringify(bgSettings));
+  document.getElementById('settings-overlay').style.display = 'none';
+  applyAppBg();
+  renderTodayPreview();
+  showToast('Background updated! 🎨');
+}
+
+function drawBgToCanvas(ctx, W, H, settings) {
+  const { style, color1, color2 } = settings;
+  ctx.clearRect(0, 0, W, H);
+
+  if (style === 'solid') {
+    ctx.fillStyle = color1;
+    ctx.fillRect(0, 0, W, H);
+
+  } else if (style === 'gradient') {
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, color1);
+    grad.addColorStop(1, color2);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+  } else if (style === 'bubbles') {
+    ctx.fillStyle = color1;
+    ctx.fillRect(0, 0, W, H);
+    const sizes = [0.28, 0.22, 0.18, 0.14, 0.16, 0.12];
+    const positions = [[0.2,0.15],[0.78,0.28],[0.5,0.55],[0.15,0.72],[0.82,0.68],[0.45,0.85]];
+    positions.forEach(([x,y], i) => {
+      ctx.beginPath();
+      ctx.arc(x*W, y*H, sizes[i]*W, 0, Math.PI*2);
+      ctx.fillStyle = color2 + 'aa';
+      ctx.fill();
+    });
+
+  } else if (style === 'stripes') {
+    ctx.fillStyle = color1;
+    ctx.fillRect(0, 0, W, H);
+    const stripeW = W / 6;
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = i % 2 === 0 ? color2 + '55' : color2 + '22';
+      ctx.fillRect(i * stripeW - H, 0, stripeW, H * 2);
+      ctx.save();
+      ctx.translate(W/2, H/2);
+      ctx.rotate(Math.PI/4);
+      ctx.fillRect(i * stripeW - H, -H, stripeW, H*3);
+      ctx.restore();
+    }
+  }
+
+  // Date stamp on all styles
+  const today = new Date();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = `bold ${Math.floor(W * 0.22)}px -apple-system, 'Helvetica Neue', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(today.getDate(), W/2, H*0.52);
+  ctx.font = `${Math.floor(W * 0.09)}px -apple-system, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText(today.toLocaleDateString('en-US',{weekday:'short',month:'short'}).toUpperCase(), W/2, H*0.52 + W*0.22);
+}
+
+// ─── Confetti ─────────────────────────────────────────────────────
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = ['#f2a65a','#6ec6f5','#6ecb8a','#c9aaed','#f47b7b','#ffffff'];
+  const pieces = Array.from({ length: 80 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -10 - Math.random() * 40,
+    r: 4 + Math.random() * 6,
+    c: colors[Math.floor(Math.random() * colors.length)],
+    vx: (Math.random() - 0.5) * 3,
+    vy: 2 + Math.random() * 4,
+    rot: Math.random() * Math.PI * 2,
+    rv: (Math.random() - 0.5) * 0.15,
+    life: 1,
+  }));
+  let frame;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    pieces.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.rot += p.rv; p.vy += 0.08;
+      if (p.y < canvas.height + 20) alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r * 1.6);
+      ctx.restore();
+    });
+    if (alive) frame = requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  if (frame) cancelAnimationFrame(frame);
+  animate();
+}
+
+// ─── Schedule ─────────────────────────────────────────────────────
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+let schedule = {}; // { 0: galleryId, 1: galleryId, ... } keyed by day-of-week (0=Sun)
+let pickerTargetDay = null;
+
+function initSchedule() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('dp-schedule') || '{}');
+    schedule = saved;
+  } catch(e) { schedule = {}; }
+  renderSchedule();
+  checkSchedule();
+  // Check every minute if day has changed
+  setInterval(checkSchedule, 60000);
+
+  document.getElementById('picker-cancel').addEventListener('click', () => {
+    document.getElementById('day-picker').style.display = 'none';
+  });
+  document.getElementById('picker-clear').addEventListener('click', () => {
+    delete schedule[pickerTargetDay];
+    saveSchedule();
+    renderSchedule();
+    document.getElementById('day-picker').style.display = 'none';
+    showToast('Wallpaper removed for that day.');
+  });
+  document.getElementById('day-picker').addEventListener('click', e => {
+    if (e.target === document.getElementById('day-picker'))
+      document.getElementById('day-picker').style.display = 'none';
+  });
+}
+
+function renderSchedule() {
+  const list = document.getElementById('schedule-list');
+  list.innerHTML = '';
+  const todayIdx = new Date().getDay();
+
+  DAYS.forEach((dayName, i) => {
+    const assignedId = schedule[i];
+    const item = state.gallery.find(g => g.id === assignedId);
+    const isToday = i === todayIdx;
+
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;margin-bottom:10px;background:${isToday ? '#fff8f0' : '#fff'};border:2px solid ${isToday ? '#f2a65a' : '#f0ebe2'};cursor:pointer;transition:border-color 0.15s;`;
+
+    // Day label
+    const label = document.createElement('div');
+    label.style.cssText = 'min-width:90px;';
+    label.innerHTML = `<div style="font-weight:700;font-size:0.95rem;color:#1a1a2e;font-family:-apple-system,sans-serif;">${dayName}</div><div style="font-size:0.72rem;color:#b0a99a;font-family:-apple-system,sans-serif;">${isToday ? '— Today' : ''}</div>`;
+
+    // Thumb or placeholder
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'width:40px;height:70px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f0ebe2;display:flex;align-items:center;justify-content:center;font-size:1.3rem;';
+    if (item) {
+      const img = document.createElement('img');
+      img.src = item.dataUrl;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      thumb.innerHTML = '';
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = '+';
+      thumb.style.color = '#b0a99a';
+      thumb.style.fontSize = '1.5rem';
+    }
+
+    // Status text
+    const status = document.createElement('div');
+    status.style.cssText = 'flex:1;font-size:0.82rem;color:#b0a99a;font-family:-apple-system,sans-serif;';
+    status.textContent = item ? item.label : 'Tap to assign';
+
+    // Arrow
+    const arrow = document.createElement('div');
+    arrow.textContent = '›';
+    arrow.style.cssText = 'font-size:1.4rem;color:#d0cbc2;';
+
+    row.appendChild(thumb);
+    row.appendChild(label);
+    row.appendChild(status);
+    row.appendChild(arrow);
+    row.addEventListener('click', () => openDayPicker(i, dayName));
+    list.appendChild(row);
+  });
+}
+
+function openDayPicker(dayIdx, dayName) {
+  pickerTargetDay = dayIdx;
+  document.getElementById('picker-title').textContent = `Wallpaper for ${dayName}`;
+  const grid = document.getElementById('picker-grid');
+  grid.innerHTML = '';
+
+  if (state.gallery.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#b0a99a;font-size:0.85rem;padding:20px;font-family:-apple-system,sans-serif;">No wallpapers yet.<br>Draw or upload one first!</div>';
+  } else {
+    state.gallery.forEach(item => {
+      const card = document.createElement('div');
+      const isSelected = schedule[dayIdx] === item.id;
+      card.style.cssText = `aspect-ratio:9/16;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;border:3px solid ${isSelected ? '#f2a65a' : 'transparent'};`;
+      const img = document.createElement('img');
+      img.src = item.dataUrl;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      card.appendChild(img);
+      if (isSelected) {
+        const check = document.createElement('div');
+        check.style.cssText = 'position:absolute;top:4px;right:4px;background:#f2a65a;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#1a1a2e;font-weight:700;';
+        check.textContent = '✓';
+        card.appendChild(check);
+      }
+      card.addEventListener('click', () => {
+        schedule[dayIdx] = item.id;
+        saveSchedule();
+        renderSchedule();
+        checkSchedule();
+        document.getElementById('day-picker').style.display = 'none';
+        showToast(`Scheduled for ${DAYS[dayIdx]}! 📅`);
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  document.getElementById('day-picker').style.display = 'block';
+}
+
+function saveSchedule() {
+  localStorage.setItem('dp-schedule', JSON.stringify(schedule));
+}
+
+function checkSchedule() {
+  const todayIdx = new Date().getDay();
+  const scheduledId = schedule[todayIdx];
+  if (scheduledId) {
+    const exists = state.gallery.find(g => g.id === scheduledId);
+    if (exists && state.todayWallpaper !== scheduledId) {
+      state.todayWallpaper = scheduledId;
+      saveGallery();
+      renderTodayPreview();
+    }
+  }
+}
+
+</script>
+
+</body>
+</html>
