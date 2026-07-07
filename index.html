@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#1a1a2e" />
   <title>Daily Paper</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Daily Paper" />
   <style>
     /* ─── Design tokens ─────────────────────────────────────────── */
     :root {
@@ -1390,6 +1392,15 @@ function checkSchedule() {
   }
 }
 
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .catch(err => console.log('SW error:', err));
+    });
+  }
 </script>
 
 </body>
